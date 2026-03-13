@@ -79,6 +79,10 @@ class CityRecommendation(BaseModel):
     job_match_score: float
     current_aqi: int
     target_aqi: int
+    # --- Real-time AQI fields (new) ---
+    live_aqi: Optional[int] = None          # Live PM2.5-based AQI from OpenAQ
+    historical_avg_aqi: Optional[float] = None  # 5-year historical average AQI
+    aqi_data_source: str = "historical_only"    # "openaq_live" | "historical_only"
 
 
 class MigrationReadinessReport(BaseModel):

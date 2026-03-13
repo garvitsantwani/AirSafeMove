@@ -1,5 +1,6 @@
 """
 Recommendations API Router - City recommendation engine.
+Updated to propagate real-time AQI fields from OpenAQ integration.
 """
 
 from fastapi import APIRouter, HTTPException
@@ -39,6 +40,10 @@ class CityRecommendation(BaseModel):
     target_aqi: int
     healthcare_score: float
     aqi_trend: str
+    # --- Real-time AQI fields ---
+    live_aqi: Optional[int] = None
+    historical_avg_aqi: Optional[float] = None
+    aqi_data_source: str = "historical_only"
 
 
 class RecommendationResponse(BaseModel):
@@ -51,9 +56,9 @@ class RecommendationResponse(BaseModel):
 
 @router.post("/")
 async def get_recommendations(request: RecommendationRequest) -> RecommendationResponse:
-    """Get top 5 city recommendations based on user profile"""
+    """Get top 5 city recommendations based on user profile (includes live AQI from OpenAQ)"""
     try:
-        recommendations, metadata = get_top_recommendations(
+        recommendations, metadata = await get_top_recommendations(
             current_city=request.current_city,
             user_age=request.age,
             profession=request.profession,
@@ -64,7 +69,7 @@ async def get_recommendations(request: RecommendationRequest) -> RecommendationR
             elderly=request.elderly,
             health_conditions=request.health_conditions
         )
-        
+
         return RecommendationResponse(
             recommendations=[CityRecommendation(**rec) for rec in recommendations],
             current_aqi=metadata["current_aqi"],

@@ -231,18 +231,57 @@ export default function ResultsPage() {
 
                                 {/* AQI Badge */}
                                 <div style={{
-                                    width: 48,
-                                    height: 48,
-                                    borderRadius: 8,
-                                    background: getAqiColor(rec.target_aqi),
-                                    color: 'white',
                                     display: 'flex',
+                                    flexDirection: 'column',
                                     alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontWeight: 700,
-                                    fontSize: 16
+                                    gap: 4,
+                                    minWidth: 56,
                                 }}>
-                                    {rec.target_aqi}
+                                    <div style={{
+                                        width: 48,
+                                        height: 48,
+                                        borderRadius: 8,
+                                        background: getAqiColor(rec.target_aqi),
+                                        color: 'white',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontWeight: 700,
+                                        fontSize: 16
+                                    }}>
+                                        {rec.target_aqi}
+                                    </div>
+                                    {rec.live_aqi != null ? (
+                                        <div style={{ textAlign: 'center' }}>
+                                            <div style={{
+                                                fontSize: 10,
+                                                fontWeight: 700,
+                                                color: '#10B981',
+                                                lineHeight: 1.2,
+                                                letterSpacing: '0.02em',
+                                            }}>
+                                                🟢 Live: {rec.live_aqi}
+                                            </div>
+                                            {rec.historical_avg_aqi != null && (
+                                                <div style={{
+                                                    fontSize: 9,
+                                                    color: '#94A3B8',
+                                                    lineHeight: 1.2,
+                                                }}>
+                                                    Avg: {Math.round(rec.historical_avg_aqi)}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div style={{
+                                            fontSize: 9,
+                                            color: '#94A3B8',
+                                            textAlign: 'center',
+                                            lineHeight: 1.2,
+                                        }}>
+                                            Hist. avg
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* City Info */}

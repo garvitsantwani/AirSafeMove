@@ -60,6 +60,10 @@ export interface CityRecommendation {
     target_aqi: number;
     healthcare_score: number;
     aqi_trend: string;
+    // Real-time AQI fields from OpenAQ
+    live_aqi?: number;
+    historical_avg_aqi?: number;
+    aqi_data_source?: string;
 }
 
 export interface RecommendationResponse {
