@@ -33,7 +33,10 @@ def generate_city_description(
     - Hospital facilities
     - Geographical features
     """
-    client = get_groq_client()
+    try:
+        client = get_groq_client()
+    except Exception:
+        return get_fallback_description(city_name, state)
     
     # Build context for special family considerations
     family_context = ""

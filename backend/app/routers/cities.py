@@ -1,13 +1,18 @@
 """
 Cities API Router - Provides city data and AQI information.
+Updated to serve real-time AQI from OpenAQ when available.
 """
 
+import logging
 from fastapi import APIRouter, HTTPException
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 
 from app.services.city_data import get_all_cities, get_city_by_name, get_city_names, get_professions
 from app.services.city_description import generate_city_description
+from app.services.openaq_service import get_current_aqi_batch, get_current_aqi
+
+logger = logging.getLogger(__name__)
 
 
 # Response models for city description
@@ -65,21 +70,36 @@ router = APIRouter()
 
 @router.get("/")
 async def list_cities() -> List[Dict[str, Any]]:
-    """Get all cities with their AQI and other data"""
+    """Get all cities with their AQI and other data (enriched with live OpenAQ AQI)"""
     cities = get_all_cities()
-    return [
-        {
+
+    # Fetch live AQI for all cities concurrently
+    city_names = [c["city_name"] for c in cities]
+    try:
+        live_aqi_map = await get_current_aqi_batch(city_names)
+    except Exception as exc:
+        logger.warning("Failed to batch-fetch live AQI: %s", exc)
+        live_aqi_map = {}
+
+    results = []
+    for city in cities:
+        live_data = live_aqi_map.get(city["city_name"])
+        live_aqi: Optional[int] = live_data["aqi_estimate"] if live_data else None
+
+        results.append({
             "city_name": city["city_name"],
             "state": city["state"],
-            "current_aqi": city["current_aqi"],
+            "current_aqi": live_aqi if live_aqi is not None else city["current_aqi"],
             "avg_aqi_5yr": city["avg_aqi_5yr"],
             "aqi_trend": city["aqi_trend"],
             "avg_rent": city["avg_rent"],
             "job_score": city["job_score"],
-            "healthcare_score": city["healthcare_score"]
-        }
-        for city in cities
-    ]
+            "healthcare_score": city["healthcare_score"],
+            # Real-time metadata
+            "live_aqi": live_aqi,
+            "aqi_data_source": "openaq_live" if live_aqi is not None else "historical_only",
+        })
+    return results
 
 
 @router.get("/names")
@@ -141,16 +161,28 @@ async def get_city(city_name: str) -> Dict[str, Any]:
 
 @router.get("/{city_name}/aqi")
 async def get_city_aqi(city_name: str) -> Dict[str, Any]:
-    """Get AQI data for a specific city"""
+    """Get AQI data for a specific city (enriched with live OpenAQ AQI)"""
     city = get_city_by_name(city_name)
     if not city:
         raise HTTPException(status_code=404, detail=f"City not found: {city_name}")
+
+    # Try to get live AQI
+    try:
+        live_data = await get_current_aqi(city_name)
+    except Exception:
+        live_data = None
+
+    live_aqi: Optional[int] = live_data["aqi_estimate"] if live_data else None
+    effective_aqi = live_aqi if live_aqi is not None else city["current_aqi"]
+
     return {
         "city_name": city["city_name"],
-        "current_aqi": city["current_aqi"],
+        "current_aqi": effective_aqi,
         "avg_aqi_5yr": city["avg_aqi_5yr"],
         "aqi_trend": city["aqi_trend"],
-        "category": get_aqi_category(city["current_aqi"])
+        "category": get_aqi_category(effective_aqi),
+        "live_aqi": live_aqi,
+        "aqi_data_source": "openaq_live" if live_aqi is not None else "historical_only",
     }
 
 
